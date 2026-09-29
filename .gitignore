@@ -1,0 +1,52 @@
+# Front-end dependencies and generated test output
+pythona-app/node_modules/
+pythona-app/dist/
+pythona-app/coverage/
+pythona-app/test-results/
+pythona-app/playwright-report/
+*.log
+
+# Android and native build output
+android/.gradle/
+android/build/
+android/app/build/
+android/**/.cxx/
+android/**/build/
+android/local.properties
+
+# Python/runtime pack build output
+.runtime-cache/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+runtime-packs/.staging/
+runtime-packs/.cache/
+runtime-packs/payload/
+runtime-packs/**/*.pya-pack
+runtime-packs/**/*-private.pem
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+**/*-private.key
+**/*-private.pem
+
+# Editor and operating-system noise
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Binary deliverables belong in GitHub Releases, never Git history. Keep them
+# locally under release/ while tracking only text manifests/checksums.
+release/*.apk
+release/*.aab
+release/*.pya-pack
+release/*.idsig
+release/*.sig
+release/*.pem
+
+# Large, checksum-locked DSH runtime is distributed as a GitHub Release asset.
+android/app/src/main/assets/dsh-runtime-rootfs.bin

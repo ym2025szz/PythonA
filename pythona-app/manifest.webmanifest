@@ -1,0 +1,10 @@
+{
+  "name": "PythonA",
+  "short_name": "PythonA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#101318",
+  "theme_color": "#101318",
+  "icons": []
+}

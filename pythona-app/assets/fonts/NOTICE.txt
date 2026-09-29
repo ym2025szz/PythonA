@@ -1,0 +1,6 @@
+PythonA bundles the following font files for offline tablet rendering:
+
+- Inter-Regular.otf / Inter-SemiBold.otf — Copyright (c) 2020 The Inter Project Authors. Licensed under the SIL Open Font License 1.1.
+- JetBrainsMono-Regular.ttf / JetBrainsMono-Bold.ttf — Copyright (c) 2020 The JetBrains Mono Project Authors. Licensed under the SIL Open Font License 1.1.
+
+The complete license texts are available from the respective font projects and must remain included in release archives.

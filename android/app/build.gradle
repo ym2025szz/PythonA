@@ -1,0 +1,373 @@
+plugins {
+    id 'com.android.application'
+}
+
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+
+def repositoryRoot = rootProject.projectDir.parentFile
+def webApplicationDir = new File(repositoryRoot, 'pythona-app')
+def pythonPrefixDir = new File(repositoryRoot, '.runtime-cache/cpython/prefix')
+def pythonSitePackagesDir = new File(repositoryRoot, '.runtime-cache/site-packages')
+def runtimeLockFile = new File(repositoryRoot, 'runtime-dependencies.lock.json')
+def runtimeDownloadDir = new File(repositoryRoot, '.runtime-cache')
+def generatedWebAssetsDir = layout.buildDirectory.dir('generated/pythonaWebAssets')
+def generatedPythonAssetsDir = layout.buildDirectory.dir('generated/pythonaPythonAssets')
+def generatedNativeLibsDir = layout.buildDirectory.dir('generated/pythonaNativeLibs')
+def npmExecutable = System.getProperty('os.name').toLowerCase().contains('windows')
+    ? 'npm.cmd'
+    : 'npm'
+def pythonAssetUnderscorePrefix = 'x-pythona-u-'
+def pythonAssetEscapePrefix = 'x-pythona-e-'
+def defaultRuntimePackPublicKey = 'SNipNAHUei4+Pt3xSS0Lvr8GJwtEQrzjqWRp87WjDnE='
+def runtimePackPublicKey = providers.gradleProperty(
+    'PYTHONA_RUNTIME_PACK_PUBLIC_KEY_RAW_BASE64'
+).getOrElse(defaultRuntimePackPublicKey)
+try {
+    if (java.util.Base64.decoder.decode(runtimePackPublicKey).length != 32) {
+        throw new GradleException('Runtime Pack Ed25519 public key must decode to 32 bytes')
+    }
+} catch (IllegalArgumentException invalidKey) {
+    throw new GradleException('Runtime Pack public key is not valid base64', invalidKey)
+}
+def encodePythonAssetName = { details ->
+    if (details.file.isDirectory()) return
+    def segments = details.relativePath.segments as String[]
+    // AAPT silently drops assets when a directory component begins with an
+    // underscore (for example zipfile/_path). Encode directory components
+    // reversibly; escape the sentinel itself so a legitimate upstream name
+    // can never alias an encoded one.
+    for (int index = 0; index < segments.length; index++) {
+        def segment = segments[index]
+        if (segment.startsWith(pythonAssetUnderscorePrefix)
+            || segment.startsWith(pythonAssetEscapePrefix)) {
+            segments[index] = pythonAssetEscapePrefix + segment
+        } else if (index < segments.length - 1 && segment.startsWith('_')) {
+            segments[index] = pythonAssetUnderscorePrefix + segment.substring(1)
+        }
+    }
+    def leaf = segments[segments.length - 1]
+    if (leaf.endsWith('.gz') || leaf.endsWith('-')) {
+        segments[segments.length - 1] = leaf + '-'
+    }
+    details.relativePath = new org.gradle.api.file.RelativePath(true, segments)
+}
+
+android {
+    namespace 'com.pythona.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.pythona.app'
+        minSdk 30
+        targetSdk 34
+        versionCode 5
+        versionName '0.5.0'
+        buildConfigField 'String', 'RUNTIME_PACK_PUBLIC_KEY_RAW_BASE64',
+            '"' + runtimePackPublicKey + '"'
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            ndkBuild {
+                arguments "PYTHONA_PYTHON_PREFIX=${pythonPrefixDir.absolutePath.replace('\\', '/')}"
+            }
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    // The bundled offline toolchain does not ship the optional IntelliJ lint
+    // artifacts. Keep release packaging reproducible offline; CI can re-enable
+    // the full lint task when those artifacts are available.
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            // Only generated runtime payloads enter the APK. Repository tests,
+            // tooling, screenshots and caches are never copied as assets.
+            assets.srcDirs = [generatedWebAssetsDir, generatedPythonAssetsDir, file('src/main/assets')]
+            // CPython's dependent shared libraries must be visible to Android's
+            // linker. libpython3.14.so itself is an imported CMake dependency.
+            jniLibs.srcDirs = [generatedNativeLibsDir, file('src/main/jniLibs')]
+        }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
+        }
+    }
+
+    ndkVersion '26.3.11579264'
+
+    packaging {
+        jniLibs {
+            // AGP 8.2 only 4 KiB-aligns uncompressed APK entries. Extracting
+            // 16 KiB-aligned ELF files at install time keeps Android 15+
+            // devices compatible without a fragile post-package zipalign.
+            useLegacyPackaging = true
+        }
+    }
+
+    androidResources {
+        // These are extracted by PythonRuntimeInstaller; preserving their
+        // bytes avoids needless recompression and keeps first-start bounded.
+        noCompress += ['pyc', 'bin']
+    }
+}
+
+dependencies {
+    // Android's platform Ed25519 JCA implementation is only guaranteed from
+    // API 33.  The lightweight Bouncy Castle verifier keeps signed runtime
+    // packs available on PythonA's API 30 minimum without installing a global
+    // security provider or depending on device-specific algorithms.
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.67'
+    testImplementation 'junit:junit:4.13.2'
+    // Local JVM tests exercise JSON protocol helpers; Android's mocked
+    // org.json methods intentionally throw in unit tests.
+    testImplementation 'org.json:json:20240303'
+}
+
+tasks.register('buildWebBundle', Exec) {
+    workingDir webApplicationDir
+    commandLine npmExecutable, 'run', 'build'
+    inputs.file(new File(webApplicationDir, 'package.json'))
+    inputs.file(new File(webApplicationDir, 'package-lock.json'))
+    inputs.file(new File(webApplicationDir, 'index.html'))
+    inputs.dir(new File(webApplicationDir, 'src'))
+    outputs.file(new File(webApplicationDir, 'src/main.bundle.js'))
+    doFirst {
+        if (!new File(webApplicationDir, 'node_modules').isDirectory()) {
+            throw new GradleException(
+                'pythona-app/node_modules is missing; run npm ci before building the APK')
+        }
+    }
+}
+
+tasks.register('syncWebAssets', Sync) {
+    dependsOn(tasks.named('buildWebBundle'))
+    from(webApplicationDir) {
+        include 'index.html'
+        include 'manifest.webmanifest'
+        include 'src/main.bundle.js'
+        include 'src/styles.css'
+        include 'assets/fonts/**'
+    }
+    into(generatedWebAssetsDir)
+}
+
+tasks.register('syncPythonRuntime', Sync) {
+    from(new File(pythonPrefixDir, 'lib/python3.14')) {
+        into 'lib/python3.14'
+        exclude 'test/**'
+        // PythonA exposes a narrow native-validated pure-wheel importer, not
+        // unmanaged pip. Omitting ensurepip prevents user code from bypassing
+        // the signed native-pack policy or the none-any wheel validator.
+        exclude 'ensurepip/**'
+        exclude '**/__pycache__/**'
+        exclude '**/*.pyc'
+        exclude 'site-packages/**'
+        // CPython regression/fuzz extension modules are not runtime features.
+        exclude 'lib-dynload/_test*.so'
+        exclude 'lib-dynload/xx*.so'
+        exclude 'lib-dynload/_xxtestfuzz*.so'
+        eachFile encodePythonAssetName
+    }
+    from(pythonSitePackagesDir) {
+        into 'lib/python3.14/site-packages'
+        exclude '**/__pycache__/**'
+        exclude '**/*.pyc'
+        eachFile encodePythonAssetName
+    }
+    from('src/main/python') {
+        into 'lib/python3.14/site-packages'
+        include 'pythona_runtime_host.py'
+        include 'pythona_test_host.py'
+        // PythonEngine.callJson is shared by Runtime and Language; Runtime
+        // keeps the Jedi dispatch shim available for test.capabilities.
+        include 'pythona_jedi_host.py'
+        exclude '**/__pycache__/**'
+        exclude '**/*.pyc'
+        eachFile encodePythonAssetName
+    }
+    from(pythonSitePackagesDir) {
+        into 'lib/python3.14/language-site-packages'
+        include 'jedi/**'
+        include 'parso/**'
+        exclude '**/__pycache__/**'
+        exclude '**/*.pyc'
+        eachFile encodePythonAssetName
+    }
+    from('src/main/python') {
+        into 'lib/python3.14/language-site-packages'
+        include 'pythona_jedi_host.py'
+        include 'pythona_runtime_host.py'
+        exclude '**/__pycache__/**'
+        exclude '**/*.pyc'
+        eachFile encodePythonAssetName
+    }
+    into(generatedPythonAssetsDir.map { it.dir('python') })
+    doFirst {
+        def required = [
+            new File(pythonPrefixDir, 'include/python3.14/Python.h'),
+            new File(pythonPrefixDir, 'lib/libpython3.14.so'),
+            new File(pythonPrefixDir, 'lib/python3.14/os.py'),
+            new File(pythonSitePackagesDir, 'jedi/__init__.py'),
+            new File(pythonSitePackagesDir, 'parso/__init__.py'),
+            new File(pythonSitePackagesDir, 'pytest/__init__.py')
+        ]
+        def missing = required.findAll { !it.isFile() }
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                'Official CPython/Jedi staging cache is incomplete: ' + missing.join(', '))
+        }
+    }
+    doLast {
+        File runtimeAssets = generatedPythonAssetsDir.get().dir('python').asFile
+        // Do not use a dot-prefixed asset name here. AAPT's default ignore
+        // pattern drops hidden files, which would leave the installer without
+        // an authoritative manifest inside the APK.
+        File manifest = new File(runtimeAssets, 'pythona-runtime-manifest.sha256')
+        def payloads = fileTree(runtimeAssets).files.findAll {
+            it.isFile() && it.canonicalFile != manifest.canonicalFile
+        }.sort { left, right ->
+            runtimeAssets.toPath().relativize(left.toPath()).toString()
+                .compareTo(runtimeAssets.toPath().relativize(right.toPath()).toString())
+        }
+        manifest.withWriter('UTF-8') { writer ->
+            payloads.each { payload ->
+                MessageDigest digest = MessageDigest.getInstance('SHA-256')
+                payload.withInputStream { stream ->
+                    byte[] buffer = new byte[64 * 1024]
+                    int count
+                    while ((count = stream.read(buffer)) >= 0) {
+                        if (count > 0) digest.update(buffer, 0, count)
+                    }
+                }
+                String hash = digest.digest().collect {
+                    String.format('%02x', it & 0xff)
+                }.join()
+                String relative = runtimeAssets.toPath().relativize(payload.toPath())
+                    .toString().replace('\\', '/')
+                if (relative.contains('\t') || relative.contains('\n') || relative.contains('\r')) {
+                    throw new GradleException('Unsafe path in Python runtime manifest: ' + relative)
+                }
+                writer.write(hash + '\t' + payload.length() + '\t' + relative + '\n')
+            }
+        }
+    }
+}
+
+tasks.register('verifyRuntimeInputs') {
+    inputs.file(runtimeLockFile)
+    doLast {
+        if (!runtimeLockFile.isFile()) {
+            throw new GradleException('Missing runtime-dependencies.lock.json')
+        }
+        def lock = new JsonSlurper().parse(runtimeLockFile)
+        lock.artifacts.findAll { !it.mavenCoordinate }.each { artifact ->
+            File input = new File(runtimeDownloadDir, artifact.filename as String)
+            if (!input.isFile()) {
+                throw new GradleException('Missing locked runtime input: ' + input)
+            }
+            if (input.length() != (artifact.size as long)) {
+                throw new GradleException('Size mismatch for locked runtime input: ' + input.name)
+            }
+            MessageDigest digest = MessageDigest.getInstance('SHA-256')
+            input.withInputStream { stream ->
+                byte[] buffer = new byte[64 * 1024]
+                int count
+                while ((count = stream.read(buffer)) >= 0) {
+                    if (count > 0) digest.update(buffer, 0, count)
+                }
+            }
+            String actual = digest.digest().collect { String.format('%02x', it & 0xff) }.join()
+            if (!actual.equalsIgnoreCase(artifact.sha256 as String)) {
+                throw new GradleException('SHA-256 mismatch for locked runtime input: ' + input.name)
+            }
+            File license = new File(repositoryRoot, artifact.licenseFile as String)
+            if (!license.isFile()) {
+                throw new GradleException('Missing locked dependency license: ' + license)
+            }
+        }
+    }
+}
+
+tasks.register('verifyDshRuntimeInput') {
+    def manifestFile = file('src/main/assets/dsh-runtime-manifest.json')
+    def rootfsFile = file('src/main/assets/dsh-runtime-rootfs.bin')
+    inputs.files(manifestFile, rootfsFile)
+    doLast {
+        def manifest = new JsonSlurper().parse(manifestFile)
+        if (manifest.format != 1 || manifest.asset != rootfsFile.name
+            || rootfsFile.length() != (manifest.size as long)) {
+            throw new GradleException('Bundled dsh manifest or archive size mismatch')
+        }
+        MessageDigest digest = MessageDigest.getInstance('SHA-256')
+        rootfsFile.withInputStream { stream ->
+            byte[] buffer = new byte[256 * 1024]
+            int count
+            while ((count = stream.read(buffer)) >= 0) {
+                if (count > 0) digest.update(buffer, 0, count)
+            }
+        }
+        String actual = digest.digest().collect { String.format('%02x', it & 0xff) }.join()
+        if (actual != manifest.sha256) {
+            throw new GradleException('Bundled dsh SHA-256 differs from its locked manifest')
+        }
+        def embedded = new JsonSlurper().parse(runtimeLockFile).embeddedDsh
+        if (embedded.sha256 != manifest.sha256 || embedded.size != manifest.size
+            || embedded.version != manifest.dshVersion) {
+            throw new GradleException('DSH manifest and dependency lock differ')
+        }
+        embedded.nativeLibraries.each { library ->
+            if (!(library.filename ==~ /[A-Za-z0-9._-]+\.so/))
+                throw new GradleException('Invalid DSH native library name')
+            File binary = file('src/main/jniLibs/arm64-v8a/' + library.filename)
+            if (!binary.isFile() || binary.length() != (library.size as long))
+                throw new GradleException('DSH native library size mismatch: ' + library.filename)
+            String hash = MessageDigest.getInstance('SHA-256').digest(binary.bytes)
+                .collect { String.format('%02x', it & 0xff) }.join()
+            if (hash != library.sha256) throw new GradleException('DSH native library SHA-256 mismatch: ' + library.filename)
+        }
+    }
+}
+
+tasks.register('syncPythonNativeLibraries', Sync) {
+    from(new File(pythonPrefixDir, 'lib')) {
+        include 'lib*_python.so'
+    }
+    into(generatedNativeLibsDir.map { it.dir('arm64-v8a') })
+}
+
+tasks.named('preBuild').configure {
+    dependsOn(tasks.named('verifyRuntimeInputs'))
+    dependsOn(tasks.named('verifyDshRuntimeInput'))
+    dependsOn(tasks.named('syncWebAssets'))
+    dependsOn(tasks.named('syncPythonRuntime'))
+    dependsOn(tasks.named('syncPythonNativeLibraries'))
+}

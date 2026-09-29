@@ -1,0 +1,27 @@
+{
+  "name": "pythona-app",
+  "version": "0.5.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build-bundle.mjs",
+    "benchmark:completion": "node tools/benchmark-completion.mjs",
+    "dev": "npm run build && node tools/dev-server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check src/compat.js && node --check src/main.js && node --check src/main.bundle.js && node --check src/editor/editor-adapter.js && node --check src/editor/editor-coordinator.js && node --check src/editor/editor-theme.js && node --check src/editor/python-completions.js && node --check src/editor/python-highlighting.js && node --check src/core/native-broker.js && node --check src/core/language-service.js && node --check src/core/workspace-store.js && node --check src/core/document-session.js && node --check src/core/patch-engine.js && node --check src/core/runtime-adapter.js && node --check src/core/test-adapter.js && node --check src/core/refactor.js && node --check src/core/dsh-controller.js && node --check src/core/dsh-gateway.js && node --check src/core/dsh-acp-client.js && node --check src/core/dsh-official.js && node --check src/core/project-model.js && node --check src/core/project-index.js && node --check src/core/context-indexer.js && node --check src/core/run-configurations.js && node --check src/core/service-registry.js && node --check src/core/ui-policy.js && node --check src/core/diagnostics.js && node --check src/core/run-result.js && node --check src/core/file-operations.js"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "6.20.3",
+    "@codemirror/commands": "6.11.0",
+    "@codemirror/lang-python": "6.2.1",
+    "@codemirror/language": "6.12.4",
+    "@codemirror/merge": "6.12.2",
+    "@codemirror/search": "6.7.2",
+    "@codemirror/state": "6.7.4",
+    "@codemirror/view": "6.43.11",
+    "@lezer/highlight": "1.2.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101318" />
+    <link rel="icon" href="data:," />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <title>PythonA · Tablet IDE</title>
+  </head>
+  <body>
+    <div id="app" data-theme="dark">
+      <header class="topbar">
+        <div class="top-start">
+          <button class="icon-button" id="command-button" aria-label="命令面板">⌘</button>
+          <strong class="brand">PythonA</strong>
+          <span class="workspace-name" id="workspace-name">ml-playground</span>
+        </div>
+        <div class="top-center">
+          <select class="run-select" id="run-config" aria-label="运行配置">
+            <option value="current-file">当前文件 · Runtime 待安装</option>
+          </select>
+          <button class="icon-button" id="run-button" data-action-id="run.execute" aria-label="运行当前文件">▶</button>
+          <button class="icon-button" id="debug-button" aria-label="调试器将在后续版本开放" title="尚未提供调试器" disabled>◉</button>
+          <button class="icon-button" id="stop-button" data-action-id="run.stop" aria-label="停止运行">■</button>
+        </div>
+        <div class="top-end">
+          <button type="button" class="service-status-button" id="service-status-button" aria-label="服务状态" aria-expanded="false"><span class="runtime-chip is-pending"><span class="status-dot"></span><span id="runtime-label">服务准备中</span></span></button>
+          <button class="icon-button" id="theme-button" aria-label="切换到浅色主题">☼</button>
+          <button class="icon-button is-active" id="dsh-toggle" data-action-id="tool.dsh.toggle" aria-label="折叠 DSH">✦</button>
+        </div>
+      </header>
+      <section class="startup-status" id="startup-status" aria-live="polite" hidden>
+        <div class="startup-status-row"><span>工作区索引</span><span class="index-chip" id="index-status">Index · stale</span></div>
+        <div class="startup-status-row" id="startup-dsh-row"><span>DSH</span><span class="startup-state">准备中…</span></div>
+        <div class="startup-status-row" id="startup-runtime-row"><span>Runtime</span><span class="startup-state">准备中…</span></div>
+        <div class="startup-status-row" id="startup-language-row"><span>Language service</span><span class="startup-state">准备中…</span></div>
+        <div class="startup-status-actions"><button class="text-button" id="startup-retry" type="button">重试</button></div>
+      </section>
+
+      <div class="body-grid" id="body-grid">
+        <nav class="rail" id="tool-window-rail" aria-label="工具窗口">
+          <button class="rail-button is-active" data-tool="project" aria-label="Project">▣</button>
+          <button class="rail-button" data-tool="search" aria-label="搜索">⌕</button>
+          <button class="rail-button" data-tool="problems" aria-label="问题">!</button>
+          <button class="rail-button" data-tool="packages" aria-label="Python 环境">◈</button>
+          <button class="rail-button" data-tool="run" aria-label="Run Configurations">▶</button>
+          <button class="rail-button rail-spacer" data-tool="terminal" aria-label="Python Console">▤</button>
+          <button class="rail-button" data-tool="settings" aria-label="设置">⚙</button>
+        </nav>
+
+        <aside class="workspace-panel" id="workspace-panel" aria-label="工作区">
+          <header class="panel-heading">
+            <strong id="workspace-panel-title">Project</strong>
+            <span class="panel-heading-actions"><button class="small-button" id="new-file-button" aria-label="新建文件">＋</button><button class="small-button" id="project-more-button" aria-label="工作区更多操作">⋯</button><button class="small-button" id="collapse-project" aria-label="折叠 Project">‹</button></span>
+          </header>
+          <div class="panel-body" id="project-view">
+            <div class="project-action-menu" id="project-action-menu" role="menu" hidden><strong id="project-action-path">工作区</strong><button role="menuitem" class="text-button" id="refresh-workspace">刷新</button><button role="menuitem" class="text-button" id="import-workspace">导入目录</button><button role="menuitem" class="text-button" id="export-workspace">导出</button><button role="menuitem" class="text-button" id="rename-file-button">重命名文件</button><button role="menuitem" class="text-button" id="delete-file-button">删除文件</button><button role="menuitem" class="text-button" id="undo-file-operation" disabled>撤销文件操作</button></div>
+            <div id="project-tree" class="project-tree" role="tree" aria-label="Project 文件树"></div>
+          </div>
+          <section class="panel-body tool-view" id="search-view" hidden>
+            <label class="field-label" for="search-input">Search everywhere</label>
+            <input class="text-input" id="search-input" placeholder="文件、符号或文本" />
+            <div class="result-list" id="search-results"></div>
+          </section>
+          <section class="panel-body tool-view" id="problems-view" hidden>
+            <div class="tool-title">Problems <span class="count-badge" id="problem-count">0</span></div>
+            <div class="result-list" id="problems-results"></div>
+          </section>
+          <section class="panel-body tool-view" id="packages-view" hidden>
+            <div class="tool-title">Python environment</div>
+            <select class="text-input" id="interpreter-select" aria-label="Python 解释器" disabled><option>由运行环境自动检测</option></select>
+            <div class="capability-box" id="runtime-capabilities"></div>
+            <div class="package-section" aria-labelledby="wheel-section-title">
+              <strong id="wheel-section-title">纯 Python wheel</strong>
+              <small>仅接受 py3/py314-none-any；拒绝 sdist、原生扩展、manylinux 与 musllinux。</small>
+              <button class="primary-button" id="install-python-wheel" disabled>选择纯 Python .whl…</button>
+              <div class="pack-status is-checking" id="python-package-status" role="status" aria-live="polite">
+                <span class="pack-status-dot" aria-hidden="true"></span>
+                <span><strong>正在检查 wheel 安装能力</strong><small>文件会先在原生层完整校验，再原子安装到应用私有环境。</small></span>
+              </div>
+            </div>
+            <div class="package-section" aria-labelledby="runtime-pack-section-title">
+            <strong id="runtime-pack-section-title">签名原生运行包</strong>
+            <small>NumPy、PyTorch 等原生库只能来自 PythonA Ed25519 签名的 .pya-pack。</small>
+            <input class="text-input" id="package-input" aria-label="运行包导入能力" placeholder="正在检查签名运行包能力…" disabled />
+            <div class="pack-actions">
+              <button class="primary-button" id="install-package" disabled>选择签名 .pya-pack…</button>
+              <button class="text-button" id="rollback-package" hidden>回滚上个版本</button>
+            </div>
+            <div class="pack-status is-checking" id="runtime-pack-status" role="status" aria-live="polite">
+              <span class="pack-status-dot" aria-hidden="true"></span>
+              <span><strong>正在检查运行包能力</strong><small>只接受 PythonA Ed25519 签名包。</small></span>
+            </div>
+            </div>
+            <div class="result-list" id="package-results"></div>
+          </section>
+          <section class="panel-body tool-view" id="run-view" hidden>
+            <div class="tool-title">Run Configurations</div>
+            <label class="field-label">名称<input class="text-input" id="run-name" placeholder="Train" /></label>
+            <label class="field-label">类型<select class="text-input" id="run-config-type"><option value="python">Python 运行</option><option value="test">测试</option></select></label>
+            <label class="field-label">测试框架<select class="text-input" id="run-framework"><option value="pytest">pytest（不可用时回退 unittest）</option><option value="unittest">unittest</option></select></label>
+            <label class="field-label">目标类型<select class="text-input" id="run-target-kind"><option value="file">Python 文件</option><option value="module">Python 模块</option></select></label>
+            <label class="field-label">目标<input class="text-input" id="run-target" placeholder="src/train.py" /></label>
+            <label class="field-label">参数<input class="text-input" id="run-args" placeholder="--epochs 10" /></label>
+            <label class="field-label">测试 node id（可选）<input class="text-input" id="run-node-id" placeholder="tests/test_demo.py::test_example" /></label>
+            <label class="field-label">工作目录<input class="text-input" id="run-working-directory" value="/" /></label>
+            <label class="field-label">环境变量<textarea class="text-input multiline-input" id="run-environment" placeholder="NAME=value"></textarea></label><p class="settings-note">名称包含 KEY、TOKEN、SECRET、PASSWORD 或 AUTH 的值仅显示为脱敏占位；保存时会保留原值。</p>
+            <label class="field-label">.env 文件<input class="text-input" id="run-env-files" placeholder=".env" /></label>
+            <button class="primary-button" id="save-run-configuration">保存配置</button>
+            <div class="result-list" id="run-configuration-list"></div>
+          </section>
+        </aside>
+        <div class="resize-handle" id="project-resize" role="separator" aria-label="调整 Project 宽度"></div>
+
+        <main class="editor-column" aria-label="代码编辑器">
+          <section class="editor-main">
+            <div class="editor-tabs" id="editor-tabs"></div>
+            <div class="editor-toolbar">
+              <div class="breadcrumbs" id="breadcrumbs"></div>
+              <span class="editor-state" id="editor-state">已保存</span>
+              <button class="text-button" id="editor-search-button" title="Ctrl+F">查找</button>
+              <button class="text-button" id="completion-button" title="Ctrl+Space">补全</button>
+              <button class="text-button" id="save-button">保存</button>
+              <details class="editor-more"><summary aria-label="编辑器更多操作">⋯</summary><div class="editor-more-menu"><button class="text-button" id="save-all-button">保存全部</button><button class="text-button" data-action-id="language.references" id="references-button" title="Shift+F12">查看引用</button><button class="text-button" data-action-id="language.rename" id="rename-button" title="F2">重命名符号</button><button class="text-button" id="undo-button">撤销</button><button class="text-button" id="redo-button">重做</button><button class="text-button" id="toggle-code-tools">代码工具条</button><button class="text-button" id="debug-menu-button" disabled>调试器（后续）</button></div></details>
+            </div>
+            <div class="editor-surface" id="editor-surface">
+              <div id="code-editor" class="code-editor-host" aria-label="Python 代码编辑器"></div>
+              <div class="code-tools" id="code-tools" role="toolbar" aria-label="代码输入辅助"><button data-code-action="indent" title="缩进">⇥</button><button data-code-action="outdent" title="反缩进">⇤</button><button data-code-action="left" aria-label="光标左移">←</button><button data-code-action="right" aria-label="光标右移">→</button><button data-code-action="previous" aria-label="上一补全候选">↑候选</button><button data-code-action="next" aria-label="下一补全候选">↓候选</button><button data-code-insert="()">()</button><button data-code-insert="[]">[]</button><button data-code-insert="{}">{}</button><button data-code-insert=":">:</button><button data-code-insert="&quot;">&quot;</button><button id="inline-accept" disabled>接受 ⇥</button><button id="inline-reject" disabled>忽略</button><button id="inline-trigger" title="AI 补全设置">AI 设置</button><span id="inline-status" role="status"></span></div>
+              <div class="live-preview" id="live-preview" hidden><span class="live-dot"></span><span id="live-preview-label">DSH 正在预览修改</span><button class="text-button" id="open-live-diff">查看 Diff</button></div>
+            </div>
+            <section class="diff-panel" id="diff-panel" hidden>
+              <div class="diff-heading"><strong id="diff-title">Diff</strong><button class="small-button" id="close-diff" aria-label="关闭 Diff">×</button></div>
+              <div class="diff-content" id="diff-content"></div>
+            </section>
+            <div class="conflict-banner" id="conflict-banner" hidden><strong>文件在外部发生修改</strong><span>保留本地内容或接受远端版本</span><button class="text-button" id="view-conflict-diff">查看差异</button><button class="text-button" id="keep-local">保留本地</button><button class="text-button" id="accept-remote">接受远端</button></div>
+            <div class="editor-notice" id="editor-notice" hidden><span id="editor-notice-text"></span><button class="text-button" id="editor-notice-retry">重试</button></div>
+          </section>
+          <section class="terminal-panel" id="terminal-panel" aria-label="Python Console">
+            <div class="terminal-resize" id="terminal-resize" tabindex="0" role="separator" aria-label="调整底部面板高度" aria-orientation="horizontal"></div>
+            <div class="terminal-heading"><div class="terminal-tabs" id="terminal-tabs"><button class="terminal-tab is-active" data-terminal="terminal">控制台</button><button class="terminal-tab" data-terminal="run">运行</button><button class="terminal-tab" data-terminal="tests">测试</button><button class="terminal-tab" data-terminal="problems">问题</button></div><button class="text-button" id="clear-terminal" aria-label="清空 Python Console">清空</button><button class="small-button" id="maximize-terminal" aria-label="最大化底部面板">□</button><button class="small-button" id="toggle-terminal" aria-label="收起 Python Console">⌄</button></div>
+            <div class="terminal-output" id="terminal-output" aria-live="polite"></div>
+            <div class="terminal-tests result-list" id="terminal-tests" hidden aria-label="Tests">
+              <div class="tests-toolbar">
+                <button class="text-button" id="tests-run-workspace">运行工作区</button>
+                <button class="text-button" id="tests-run-current">运行当前文件</button>
+                <input class="text-input" id="tests-path" aria-label="测试文件或目录" placeholder="文件或目录（留空为工作区）" />
+                <button class="text-button" id="tests-discover">发现</button>
+                <button class="text-button" id="tests-run-path">运行路径</button>
+                <button class="text-button" id="tests-cancel" disabled>取消</button>
+              </div>
+              <div id="tests-status" role="status"></div>
+              <div class="tests-filters"><label>显示 <select id="tests-outcome-filter"><option value="all">全部</option><option value="failed">失败与异常</option><option value="passed">通过</option><option value="skipped">跳过</option></select></label><label><input id="tests-failed-first" type="checkbox" checked />失败优先</label></div>
+              <div id="test-results"></div>
+            </div>
+            <div class="terminal-problems result-list" id="terminal-problems" hidden aria-label="Problems"></div>
+            <form class="terminal-input-row" id="terminal-form"><span class="terminal-prompt">stdin ›</span><input id="terminal-input" autocomplete="off" spellcheck="false" aria-label="Python 标准输入" placeholder="等待脚本请求输入" disabled /><button class="text-button" type="submit" id="terminal-send" disabled>发送</button></form>
+          </section>
+        </main>
+
+        <div class="resize-handle" id="dsh-resize" role="separator" aria-label="调整 DSH 宽度"></div>
+        <aside class="dsh-panel" id="dsh-panel" aria-label="DSH 编程助手">
+          <header class="dsh-heading"><span class="dsh-mark">✦</span><strong id="dsh-conversation-title">新对话</strong><span id="dsh-file-label" hidden></span><span class="dsh-connection-state" id="dsh-connection-state" title="PythonA 内置官方 dsh 状态">内置 dsh</span><span class="panel-heading-actions"><button class="small-button" id="dsh-history-button" aria-label="历史会话">◷</button><button class="small-button" id="clear-dsh" aria-label="新建会话">＋</button><button class="small-button" id="collapse-dsh" aria-label="折叠 DSH">›</button></span></header>
+          <div class="dsh-tabs" role="tablist"><button class="dsh-tab is-active" data-dsh-tab="chat" role="tab">对话</button><button class="dsh-tab" data-dsh-tab="activity" role="tab">活动</button><button class="dsh-tab" data-dsh-tab="changes" role="tab">更改 <span class="count-badge" id="change-count">0</span></button></div>
+          <div class="dsh-body" id="dsh-chat-view">
+            <div class="dsh-stream" id="dsh-stream" aria-label="DSH 对话"><div id="dsh-history-pages"><button id="dsh-load-older" class="text-button" hidden>加载较早消息</button><button id="dsh-history-latest" class="text-button" hidden>回到最新消息</button></div><div id="dsh-patch-approval"></div></div>
+            <form class="dsh-prompt" id="dsh-form">
+              <div class="dsh-live-bar"><span id="dsh-turn-status" role="status">就绪</span><button id="dsh-jump-latest" type="button" class="text-button" hidden>↓ 最新输出</button></div>
+              <div class="dsh-composer-model"><button type="button" id="dsh-model-button" aria-haspopup="dialog"><span>选择模型</span><b aria-hidden="true">⌄</b></button><button id="dsh-retry" type="button" class="text-button" hidden>重试</button></div>
+              <details class="dsh-context" id="dsh-context"><summary><span id="dsh-context-label">本次请求上下文</span><span id="dsh-context-usage">用量待返回</span></summary><div class="dsh-context-content"><p id="dsh-context-description" class="hint">当前文件会自动加入；可添加文件或编辑器选区。上下文用量以官方 dsh 返回的数据为准。</p><div id="dsh-context-meter" hidden><meter id="dsh-context-meter-value" min="0" max="100" value="0"></meter></div><button type="button" class="text-button" id="dsh-context-refresh">预览下一次上下文</button><div id="dsh-context-files"></div></div></details>
+              <div class="dsh-attachment-chips" id="dsh-attachment-chips"></div>
+              <div class="dsh-attach-picker" id="dsh-attach-picker" hidden><input id="dsh-attach-search" aria-label="搜索上下文文件" placeholder="搜索工作区文件…" /><div id="dsh-attach-files"></div></div>
+              <textarea id="dsh-input" rows="3" placeholder="让 DSH 阅读、修改或运行当前工作区…"></textarea>
+              <div class="prompt-actions"><div class="dsh-context-actions"><button class="text-button" type="button" id="dsh-attach-file" title="添加工作区文件">＋ 文件</button><button class="text-button" type="button" id="dsh-attach-selection" title="加入编辑器当前选区">选区</button></div><button class="text-button" type="button" id="dsh-cancel" disabled>停止</button><button class="primary-button" type="submit" id="dsh-send">发送</button></div>
+            </form>
+          </div>
+          <div class="dsh-body" id="dsh-activity-view" hidden><div class="activity-list" id="activity-list"></div></div>
+          <div class="dsh-body" id="dsh-changes-view" hidden><div class="change-list" id="change-list"></div></div>
+          <div class="approval-card" id="approval-card" hidden><strong id="approval-title">命令等待审批</strong><code id="approval-command"></code><div class="approval-actions"><button class="text-button" id="deny-command">拒绝</button><button class="primary-button" id="allow-command">仅本次允许</button></div></div>
+        </aside>
+        <aside class="dsh-rail" id="dsh-rail" hidden aria-label="折叠的 DSH"><button class="rail-button" id="expand-dsh" aria-label="展开 DSH">✦</button><span class="pending-dot" id="pending-dot" hidden></span><span class="vertical-label">DSH</span></aside>
+      </div>
+      <footer class="statusbar"><span class="status-warning" id="status-runtime">● Runtime provider pending</span><span id="status-interpreter">Provider pending</span><span id="status-cursor">Ln 1, Col 1</span><span class="status-grow"></span><span id="status-events">0 file events</span><span>UTF-8</span></footer>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <dialog id="dsh-model-dialog" class="model-dialog" aria-labelledby="model-dialog-title">
+      <header class="dialog-heading"><strong id="model-dialog-title">选择模型</strong><button type="button" class="small-button" data-model-close aria-label="关闭模型选择">×</button></header>
+      <input class="text-input" data-model-search placeholder="搜索模型或 Provider…" aria-label="搜索模型或 Provider" />
+      <div data-model-list class="model-list" role="listbox" aria-label="模型"></div>
+      <footer class="model-dialog-footer"><label>推理等级<select data-model-reasoning aria-label="模型推理等级"></select></label><p class="hint">选择应用于下一轮，正在运行的请求保持原模型。</p><div class="dialog-actions"><button class="text-button" type="button" id="dsh-refresh-catalog" data-model-refresh>刷新目录</button><button class="primary-button" type="button" data-model-manage>管理 Provider</button></div></footer>
+      <div hidden aria-hidden="true"><select id="dsh-provider-select"></select><input id="dsh-model-search" /><select id="dsh-model-select"></select><select id="dsh-reasoning-select"></select></div>
+    </dialog>
+    <dialog id="dsh-history-dialog" class="history-dialog" aria-labelledby="history-title">
+      <header class="dialog-heading"><strong id="history-title">会话历史</strong><button class="small-button" id="close-dsh-history" type="button" aria-label="关闭历史">×</button></header>
+      <div class="history-toolbar"><label><input type="checkbox" id="history-archived" />查看归档</label><button class="text-button" id="rename-conversation" type="button">重命名当前会话</button></div>
+      <div id="dsh-history-list" class="history-list"></div><button class="text-button" id="history-load-more" hidden>更多会话</button>
+    </dialog>
+    <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+      <header class="dialog-heading"><strong id="settings-title">设置</strong><button class="small-button" id="close-settings" aria-label="关闭设置">×</button></header>
+      <div class="settings-layout"><nav class="settings-nav" aria-label="设置分类"><button class="is-active" data-settings-page="appearance">外观</button><button data-settings-page="editor">编辑器</button><button data-settings-page="inline">AI 补全</button><button data-settings-page="fonts">字体</button><button data-settings-page="runtime">Runtime</button><button data-settings-page="dsh">DSH Provider</button><button data-settings-page="context">上下文与隐私</button><button data-settings-page="limits">请求限制</button><button data-settings-page="network">网络状态</button><button data-settings-page="security">安全与权限</button><button data-settings-page="about">更新与关于</button></nav><div class="settings-content">
+        <section data-settings-section="appearance"><h2>外观</h2><label>主题<select id="settings-theme"><option value="dark">深色</option><option value="light">浅色</option></select></label><p class="settings-note">布局会在横屏宽度间自适应：宽屏三栏，中等宽度把 DSH 收为右侧栏并以覆盖层展开。</p><label class="switch-row"><span>启动时恢复工作区</span><input type="checkbox" id="settings-restore" checked /></label></section>
+        <section data-settings-section="editor" hidden><h2>编辑器</h2><label>字号<input type="range" id="settings-editor-size" min="13" max="22" value="16" /><output id="editor-size-value">16 px</output></label><label>Tab 宽度<select id="settings-tab-size"><option value="2">2 个空格</option><option value="4" selected>4 个空格</option><option value="8">8 个空格</option></select></label><label>自动保存<select id="settings-autosave"><option value="off">关闭</option><option value="2" selected>2 秒后</option><option value="5">5 秒后</option></select></label><label class="switch-row"><span>显示行号</span><input type="checkbox" id="settings-line-numbers" checked /></label><label class="switch-row"><span>代码折叠</span><input type="checkbox" id="settings-fold-gutter" checked /></label><label class="switch-row"><span>输入时自动补全</span><input type="checkbox" id="settings-autocomplete" checked /></label><label class="switch-row"><span>自动换行</span><input type="checkbox" id="settings-word-wrap" /></label></section>
+        <section data-settings-section="inline" hidden><h2>AI 代码补全</h2><label class="switch-row"><span>停顿后自动请求 AI 建议</span><input type="checkbox" id="settings-inline-enabled" checked /></label><label>补全模型<select id="settings-inline-model"><option value="">跟随 DSH 当前模型</option></select></label><p class="settings-note">停止输入约 0.8 秒后请求；只发送光标附近的代码，不发送聊天历史。建议需要按 Tab 或点击接受才写入，继续编辑会立即取消。</p><p class="settings-note">每次最多 8 行，最多 12 次/分钟。网络和模型耗时单独计算，正在聊天时自动暂停。关闭代码上传时 AI 补全同时关闭。</p><p id="settings-inline-capability" class="settings-note">正在检查补全能力…</p></section>
+        <section data-settings-section="fonts" hidden><h2>字体</h2><p class="settings-note">界面与 DSH 默认使用 Inter，代码使用 JetBrains Mono；代码片段仍保持等宽对齐。</p><label>界面字体<select id="settings-ui-font"><option value="system">Inter / Noto Sans SC</option><option value="serif">系统衬线（阅读模式）</option></select></label><label>代码字体<select id="settings-code-font"><option value="jetbrains">JetBrains Mono / Cascadia Mono</option><option value="system">系统等宽</option></select></label><label>DSH 字体<select id="settings-dsh-font"><option value="ui">Inter / Noto Sans SC</option><option value="code">跟随代码字体</option></select></label></section>
+        <section data-settings-section="runtime" hidden><h2>Runtime</h2><p class="settings-note" id="settings-runtime-capability"></p><p class="settings-note">解释器由应用自动检测。PyTorch：实验包不可用，只有通过 ARM64 CPU 验收后才会开放。</p><label>解释器<select id="settings-interpreter" disabled><option>由运行环境自动检测</option></select></label><label class="switch-row"><span>后台持续运行（尚未开放）</span><input type="checkbox" id="settings-background" disabled /></label></section>
+        <section data-settings-section="dsh" hidden><h2>DSH 模型与 Provider</h2><p class="settings-note">PythonA 直接启动官方 dsh ACP 运行时。API Key、Provider、模型目录和会话都由内置 dsh 管理；PythonA 只负责编辑器上下文、建议、Diff、确认和工作区工具。</p><div class="official-dsh-card" id="settings-official-dsh-card"><div class="official-dsh-status"><span class="status-dot"></span><strong id="settings-official-status">正在连接 PythonA 内置 dsh…</strong></div><p class="settings-note" id="settings-official-detail">首次使用会解压官方 dsh 运行包，之后直接复用。</p><div class="official-dsh-summary" id="settings-official-summary"></div><p id="settings-saved-provider" class="settings-note" style="white-space: pre-wrap" role="status">正在读取已保存配置…</p><div class="settings-actions"><button class="primary-button" id="open-official-settings" type="button">打开 PythonA 模型设置</button><button class="text-button" id="refresh-official-settings" type="button">刷新目录</button></div><p class="settings-note">自定义 OpenAI 兼容 Provider 的名称、Base URL、模型 ID 和 API Key 在 Android 原生窗口输入；网页不接收 Key。</p><div class="settings-actions"><button class="primary-button" id="save-official-key" type="button">配置自定义 Provider</button></div></div><label>Provider<select id="settings-official-provider"></select></label><label>模型<select id="settings-official-model"></select></label><label>推理等级<select id="settings-official-reasoning"><option value="off">关闭</option><option value="low">低</option><option value="medium">中</option><option value="high">高</option></select></label><details class="compat-provider-details"><summary>兼容 Provider / 浏览器回退</summary><p class="settings-note">保留现有手动 Provider 配置，仅用于浏览器预览或官方 dsh 不可用时的旧兼容路径。</p><label>配置<select id="settings-dsh-profile"></select></label><label>Provider<select id="settings-provider-kind"><option value="openai-compatible">OpenAI-compatible</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Gemini</option><option value="qwen">Qwen</option></select></label><label>显示名称<input id="settings-provider-name" class="text-input" /></label><label>Base URL<input id="settings-provider-url" class="text-input" inputmode="url" /></label><label>模型<input id="settings-provider-model" class="text-input" /></label><label>自定义 Header<textarea id="settings-provider-headers" class="text-input multiline-input" placeholder="X-Header: value（留空保留现有配置）"></textarea></label><label>API Key<input id="settings-provider-key" class="text-input" type="password" maxlength="8192" autocomplete="off" /></label><label class="switch-row"><span>允许本地回环端点</span><input type="checkbox" id="settings-provider-local" /></label><div class="settings-actions"><button class="text-button" id="delete-provider" type="button">删除</button><button class="text-button" id="test-provider" type="button">测试连接</button><button class="primary-button" id="save-provider" type="button">保存 Provider</button></div></details><label class="switch-row"><span>实时显示修改预览</span><input type="checkbox" id="settings-live-preview" checked /></label><label class="switch-row"><span>应用补丁前要求确认</span><input type="checkbox" id="settings-approval" checked disabled /></label></section>
+        <section data-settings-section="context" hidden><h2>上下文与隐私</h2><label class="switch-row"><span>允许向所选 Provider 上传代码</span><input type="checkbox" id="settings-code-upload" checked /></label><p class="settings-note">每次请求都会展示文件清单、字节数、排除项和脱敏结果；.pyaignore 与密钥扫描始终生效。</p><pre class="settings-manifest" id="settings-context-manifest">尚未发送请求</pre></section>
+        <section data-settings-section="limits" hidden><h2>请求限制</h2><label>单次工具步骤上限<input class="text-input" value="12" disabled /></label><label>任务时限<input class="text-input" value="120 秒" disabled /></label><label>Runtime 输出回传上限<input class="text-input" value="32 KiB" disabled /></label></section>
+        <section data-settings-section="network" hidden><h2>网络状态</h2><p class="settings-note">只有 :dsh 进程拥有 INTERNET；WebView、Runtime 与 Language 默认拒绝网络。</p><pre class="settings-manifest" id="settings-network-status">正在读取…</pre></section>
+        <section data-settings-section="security" hidden><h2>安全与权限</h2><p class="settings-note">Android 私有工作区是文件权威来源；Python Console 不是 Bash/PTTY。运行、测试与包安装都需要独立确认。</p><label class="switch-row"><span>外部目录 SAF（尚未实现）</span><input type="checkbox" id="settings-external-files" disabled /></label><label class="switch-row"><span>Runtime / Language 网络</span><input type="checkbox" id="settings-network" disabled /></label></section>
+        <section data-settings-section="about" hidden><h2>更新与关于</h2><p class="settings-note">PythonA 0.5.0 · 行内补全、连续会话与平板开发工作流</p><p class="settings-note">CPython/Jedi 能力以原生服务实际报告为准；PyTorch 实验包当前不可用。</p><h3>本机会话性能</h3><p class="settings-note">只记录有界数值样本，不含代码、提示词或 Key。WebView 数据不能替代冷启动、PSS 和同机 0.3 对比。</p><pre id="performance-summary" class="settings-note"></pre><button class="text-button" id="export-diagnostics" type="button">导出性能诊断 JSON</button><button class="primary-button" id="check-updates" disabled aria-disabled="true" title="尚未配置发布更新源">更新渠道未配置</button></section>
+      </div></div>
+      <footer class="dialog-footer"><button class="text-button" id="cancel-settings">取消</button><button class="primary-button" id="apply-settings">应用</button></footer>
+    </dialog>
+
+    <dialog id="diagnostics-dialog" aria-labelledby="diagnostics-title"><form method="dialog"><h3 id="diagnostics-title">本机会话性能诊断</h3><p class="settings-note">仅有界数值样本；不包含代码、提示词或凭据。</p><textarea id="diagnostics-json" class="text-input" readonly rows="16" aria-label="性能诊断 JSON"></textarea><div class="settings-actions"><button type="button" id="copy-diagnostics" class="text-button">复制 JSON</button><button type="button" id="download-diagnostics" class="text-button">保存 JSON 文件</button><button value="close" class="primary-button">关闭</button></div></form></dialog>
+    <dialog id="dirty-tab-dialog" aria-labelledby="dirty-tab-name"><form method="dialog"><h3 id="dirty-tab-name">有未保存的修改</h3><p>保存后关闭，或放弃本次未保存的修改。</p><div class="settings-actions"><button value="cancel" class="text-button">继续编辑</button><button value="discard" class="text-button">放弃修改</button><button value="save" class="primary-button">保存并关闭</button></div></form></dialog>
+    <dialog id="command-dialog" class="command-dialog" aria-labelledby="command-title"><header class="dialog-heading"><strong id="command-title">命令面板</strong><button class="small-button" id="close-command">×</button></header><input class="text-input" id="command-search" placeholder="搜索操作" /><div class="command-list" id="command-list"></div></dialog>
+
+    <script src="./src/main.bundle.js"></script>
+  </body>
+</html>

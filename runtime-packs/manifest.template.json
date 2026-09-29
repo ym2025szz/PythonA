@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "packId": "org.pythona.scientific.arm64",
+  "version": "0.3.0",
+  "buildId": "replace-with-reproducible-build-id",
+  "pythonAbi": "cp314",
+  "abi": "arm64-v8a",
+  "minApi": 30,
+  "dependencies": [],
+  "capabilities": {
+    "python": true,
+    "training": false,
+    "inference": false,
+    "cuda": false,
+    "multiprocessing": false,
+    "packages": {
+      "numpy": "2.4.x"
+    }
+  },
+  "licenses": [
+    {
+      "name": "Replace with packaged dependency",
+      "spdx": "NOASSERTION",
+      "path": "metadata/licenses/NOTICE.txt"
+    }
+  ]
+}

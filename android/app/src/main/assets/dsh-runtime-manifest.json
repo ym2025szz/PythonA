@@ -1,0 +1,31 @@
+{
+  "format": 1,
+  "version": "dsh-0.1.2-alpha.2-pythona-1",
+  "dshVersion": "0.1.2-alpha.2",
+  "asset": "dsh-runtime-rootfs.bin",
+  "size": 159390503,
+  "sha256": "d72d00e640d5b29b63cf5d09dbc4338bdd42ed8f23fbd0926cacb7f691227014",
+  "unpackedBytes": 604698702,
+  "entryCount": 46044,
+  "criticalFiles": [
+    {
+      "path": "usr/local/bin/node",
+      "size": 122077656,
+      "sha256": "3e53e5ff5eaa922f1b4308312d50da9091db62d40b87716ad36c60b347e7f984"
+    },
+    {
+      "path": "usr/local/lib/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "size": 8021,
+      "sha256": "dc23f6c5dd7df8834e3e38bdb9609d77b459834681ae9b7133b417b0c35f3166"
+    },
+    {
+      "path": "usr/local/lib/node_modules/@deepseek-ai/dsh/package.json",
+      "size": 6833,
+      "sha256": "4bb377c5181da014ae97b12d51f978ee1123fe9950642b3df0723c6669370e15"
+    }
+  ],
+  "entrypoint": {
+    "path": "usr/local/bin/dsh",
+    "target": "../lib/node_modules/@deepseek-ai/dsh/lib/bin.js"
+  }
+}

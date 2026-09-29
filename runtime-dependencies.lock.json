@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "target": {
+    "androidAbi": "arm64-v8a",
+    "minAndroidApi": 30,
+    "pythonVersion": "3.14.7",
+    "pythonAbi": "cp314"
+  },
+  "artifacts": [
+    {
+      "id": "cpython-android-arm64",
+      "version": "3.14.7",
+      "role": "embedded-python-runtime",
+      "filename": "python-3.14.7-aarch64-linux-android.tar.gz",
+      "url": "https://www.python.org/ftp/python/3.14.7/python-3.14.7-aarch64-linux-android.tar.gz",
+      "size": 22477276,
+      "sha256": "6d50cc3aa66e414a439594089bcdfb5f1264358155c70c1f00471c24cfb477fb",
+      "license": "PSF-2.0",
+      "licenseFile": "licenses/CPython-3.14.7.txt"
+    },
+    {
+      "id": "jedi",
+      "version": "0.20.0",
+      "role": "python-language-service",
+      "filename": "jedi-0.20.0-py2.py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/9a/93/242e2eab5fe682ffcb8b0084bde703a41d51e17ee0f3a31ff0d9d813620a/jedi-0.20.0-py2.py3-none-any.whl",
+      "size": 4884812,
+      "sha256": "7bdd9c2634f56713299976f4cbd59cb3fa92165cc5e05ea811fb253480728b67",
+      "license": "MIT",
+      "licenseFile": "licenses/Jedi-0.20.0.txt"
+    },
+    {
+      "id": "parso",
+      "version": "0.8.7",
+      "role": "jedi-parser-dependency",
+      "filename": "parso-0.8.7-py2.py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/99/5d/8268b644392ee874ee82a635cd0df1773de230bde356c38de28e298392cc/parso-0.8.7-py2.py3-none-any.whl",
+      "size": 107025,
+      "sha256": "a8926eb2a1b915486941fdbd31e86a4baf88fe8c210f25f2f35ecec5b574ca1c",
+      "license": "MIT AND PSF-2.0",
+      "licenseFile": "licenses/Parso-0.8.7.txt"
+    },
+    {
+      "id": "pytest",
+      "version": "9.0.3",
+      "role": "runtime-test-framework",
+      "filename": "pytest-9.0.3-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/d4/24/a372aaf5c9b7208e7112038812994107bc65a84cd00e0354a88c2c77a617/pytest-9.0.3-py3-none-any.whl",
+      "size": 375249,
+      "sha256": "2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9",
+      "license": "MIT",
+      "licenseFile": "licenses/pytest-9.0.3.txt"
+    },
+    {
+      "id": "iniconfig",
+      "version": "2.1.0",
+      "role": "pytest-dependency",
+      "filename": "iniconfig-2.1.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/2c/e1/e6716421ea10d38022b952c159d5161ca1193197fb744506875fbb87ea7b/iniconfig-2.1.0-py3-none-any.whl",
+      "size": 6050,
+      "sha256": "9deba5723312380e77435581c6bf4935c94cbfab9b1ed33ef8d238ea168eb760",
+      "license": "MIT",
+      "licenseFile": "licenses/iniconfig-2.1.0.txt"
+    },
+    {
+      "id": "packaging",
+      "version": "25.0",
+      "role": "pytest-dependency",
+      "filename": "packaging-25.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl",
+      "size": 66469,
+      "sha256": "29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484",
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "licenseFile": "licenses/packaging-25.0.txt"
+    },
+    {
+      "id": "pluggy",
+      "version": "1.6.0",
+      "role": "pytest-dependency",
+      "filename": "pluggy-1.6.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl",
+      "size": 20538,
+      "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+      "license": "MIT",
+      "licenseFile": "licenses/pluggy-1.6.0.txt"
+    },
+    {
+      "id": "pygments",
+      "version": "2.20.0",
+      "role": "pytest-dependency",
+      "filename": "pygments-2.20.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl",
+      "size": 1231151,
+      "sha256": "81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176",
+      "license": "BSD-2-Clause",
+      "licenseFile": "licenses/Pygments-2.20.0.txt"
+    },
+    {
+      "id": "bouncycastle-bcprov-jdk15on",
+      "version": "1.67",
+      "role": "android-api30-ed25519-verifier",
+      "mavenCoordinate": "org.bouncycastle:bcprov-jdk15on:1.67",
+      "filename": "bcprov-jdk15on-1.67.jar",
+      "url": "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/1.67/bcprov-jdk15on-1.67.jar",
+      "size": 5961136,
+      "sha256": "fa0041a36f9f20af3c6b8dbf6eb49a969e2c9cc029049d61acc526ba3247b3ef",
+      "license": "Bouncy-Castle",
+      "licenseFile": "licenses/Bouncy-Castle-1.67.txt"
+    }
+  ],
+  "embeddedDsh": {
+    "manifest": "android/app/src/main/assets/dsh-runtime-manifest.json",
+    "version": "0.1.2-alpha.2",
+    "asset": "dsh-runtime-rootfs.bin",
+    "size": 159390503,
+    "sha256": "d72d00e640d5b29b63cf5d09dbc4338bdd42ed8f23fbd0926cacb7f691227014",
+    "nativeLibraries": [
+      {
+        "filename": "libandroidshmem.so",
+        "size": 14432,
+        "sha256": "84475798e07c8174dbbfaec70a827fdb02f19ffa69a589380c13e7507fd0e731"
+      },
+      {
+        "filename": "libproot.so",
+        "size": 268976,
+        "sha256": "cbde86eb01b58413f9e4673e182caca5440e8fc4af8482a0e23d0faa0846f721"
+      },
+      {
+        "filename": "libprootloader.so",
+        "size": 67736,
+        "sha256": "a2cbccfc776e23225b75e6700dd1990fcd505d2e973f5bfa19c76642d4e41c7d"
+      },
+      {
+        "filename": "libprootloader32.so",
+        "size": 67484,
+        "sha256": "4c649eb2dce258c9111231940fdbf0474bcf1cd6dd447ad9bdf2898b35a85554"
+      },
+      {
+        "filename": "libtalloc.so",
+        "size": 31440,
+        "sha256": "3c9b207c0a6ea2896b7523e03f55d9ab0d9e88baa115d4c32b84058ff4246fbb"
+      }
+    ],
+    "licenseAuditStatus": "internal-candidate; complete rootfs/native-component release audit pending"
+  }
+}

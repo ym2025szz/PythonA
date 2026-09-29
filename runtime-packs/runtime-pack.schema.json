@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pythona.dev/schemas/runtime-pack-v1.json",
+  "title": "PythonA runtime pack manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packId",
+    "version",
+    "buildId",
+    "pythonAbi",
+    "abi",
+    "minApi",
+    "files",
+    "capabilities",
+    "licenses"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "packId": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$", "maxLength": 96 },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
+    "buildId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$" },
+    "pythonAbi": { "type": "string", "pattern": "^cp[0-9]{2,3}$" },
+    "abi": { "const": "arm64-v8a" },
+    "minApi": { "type": "integer", "minimum": 30 },
+    "maxUnpackedBytes": { "type": "integer", "minimum": 1 },
+    "dependencies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*@[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "size", "kind"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^(lib|python|stubs|metadata)/[^\\\\]+$", "maxLength": 240 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "size": { "type": "integer", "minimum": 0 },
+          "kind": { "enum": ["native", "python", "stub", "metadata"] }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "training", "inference", "cuda", "multiprocessing"],
+      "properties": {
+        "python": { "type": "boolean" },
+        "training": { "type": "boolean" },
+        "inference": { "type": "boolean" },
+        "cuda": { "const": false },
+        "multiprocessing": { "const": false },
+        "packages": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "maxLength": 64 }
+        }
+      }
+    },
+    "licenses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "spdx", "path"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 128 },
+          "spdx": { "type": "string", "maxLength": 64 },
+          "path": { "type": "string", "pattern": "^metadata/licenses/", "maxLength": 240 }
+        }
+      }
+    }
+  }
+}
